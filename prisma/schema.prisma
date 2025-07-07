@@ -1,0 +1,113 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  name           String
+  email          String    @unique
+  password       String
+  image          String?
+  createdAt      DateTime  @default(now())
+  savedRecipes   SavedRecipe[]
+  cookedRecipes  CookedRecipe[]
+  comments       Comment[]
+  followedBy     Follows[] @relation("FollowedBy")
+  following      Follows[] @relation("Following")
+  authoredRecipes Recipe[] @relation("UserRecipes")
+  ratings         Rating[]
+}
+
+model Follows {
+  id           String   @id @default(uuid())
+  follower     User     @relation("Following", fields: [followerId], references: [id])
+  followerId   String
+  following    User     @relation("FollowedBy", fields: [followingId], references: [id])
+  followingId  String
+
+  @@unique([followerId, followingId])
+}
+
+model Recipe {
+  id          String     @id @default(uuid())
+  title       String
+  description String
+  cuisine     String
+  image       String
+  cookingTime Int
+  createdAt   DateTime   @default(now())
+  author      User?      @relation("UserRecipes", fields: [authorId], references: [id])
+  authorId    String?
+  comments    Comment[]
+  ratings     Rating[]
+  savedBy     SavedRecipe[]
+  cookedBy    CookedRecipe[]
+  ingredients Ingredient[]
+  instructions Instruction[]
+}
+
+model Ingredient {
+  id        String   @id @default(uuid())
+  name      String
+  quantity  String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+}
+
+model Instruction {
+  id        String   @id @default(uuid())
+  step      Int
+  text      String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  text      String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+}
+
+model SavedRecipe {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+  createdAt DateTime @default(now())
+}
+
+model CookedRecipe {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+  createdAt DateTime @default(now())
+}
+
+model Rating {
+  id        String   @id @default(uuid())
+  value     Int
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipeId  String
+  createdAt DateTime @default(now())
+}
