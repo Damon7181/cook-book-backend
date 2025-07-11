@@ -15,7 +15,6 @@ async function getAllRecipes(req, res) {
 }
 
 async function createRecipe(req, res) {
-  // If a videoUrl is provided, use Gemini to extract recipe details
   const { videoUrl } = req.body;
   let recipeData = req.body;
   // console.log("Received videoUrl and data:", videoUrl, recipeData);
@@ -23,7 +22,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
+      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially from youtube link thumbnail), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
