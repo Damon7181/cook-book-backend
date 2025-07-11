@@ -23,7 +23,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL, cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
+      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
@@ -33,6 +33,7 @@ async function createRecipe(req, res) {
             type: Type.OBJECT,
             properties: {
               title: { type: Type.STRING },
+              description: { type: Type.STRING },
               cuisine: { type: Type.STRING },
               image: { type: Type.STRING },
               cook_time: { type: Type.STRING },
@@ -45,6 +46,7 @@ async function createRecipe(req, res) {
             },
             propertyOrdering: [
               "title",
+              "description",
               "cuisine",
               "image",
               "cook_time",
