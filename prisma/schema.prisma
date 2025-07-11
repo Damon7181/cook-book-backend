@@ -57,7 +57,7 @@ model Recipe {
   description String
   cuisine     String
   image       String
-  cookingTime Int
+  cookingTime String
   createdAt   DateTime   @default(now())
   author      User?      @relation("UserRecipes", fields: [authorId], references: [id])
   authorId    String?
@@ -69,11 +69,18 @@ model Recipe {
   instructions Instruction[]
 }
 
+// model Ingredient {
+//   id        String   @id @default(uuid())
+//   name      String
+//   quantity  String
+//   recipe    Recipe   @relation(fields: [recipeId], references: [id])
+//   recipeId  String
+// }
 model Ingredient {
   id        String   @id @default(uuid())
   name      String
   quantity  String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   recipeId  String
 }
 
@@ -81,7 +88,7 @@ model Instruction {
   id        String   @id @default(uuid())
   step      Int
   text      String
-  recipe    Recipe   @relation(fields: [recipeId], references: [id])
+  recipe    Recipe   @relation(fields: [recipeId], references: [id], onDelete: Cascade)
   recipeId  String
 }
 
