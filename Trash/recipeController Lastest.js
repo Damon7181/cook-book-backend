@@ -1,5 +1,6 @@
 const prisma = require("../prisma/client");
 const { GoogleGenAI, Type } = require("@google/genai");
+const vision = require("@google-cloud/vision");
 
 async function getAllRecipes(req, res) {
   const recipes = await prisma.recipe.findMany({
@@ -89,7 +90,33 @@ async function createRecipe(req, res) {
     }
   }
 
-  // Create recipe as before
+  // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
+  if (recipeData.image) {
+    try {
+      const client = new vision.ImageAnnotatorClient();
+      const [result] = await client.safeSearchDetection(recipeData.image);
+      const safe = result.safeSearchAnnotation;
+      if (safe) {
+        const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
+        if (
+          unsafeLikelihoods.includes(safe.adult) ||
+          unsafeLikelihoods.includes(safe.violence) ||
+          unsafeLikelihoods.includes(safe.racy) ||
+          unsafeLikelihoods.includes(safe.medical) ||
+          unsafeLikelihoods.includes(safe.spoof)
+        ) {
+          return res
+            .status(400)
+            .json({ error: "Recipe image is unsafe or explicit." });
+        }
+      }
+    } catch (err) {
+      return res
+        .status(500)
+        .json({ error: "Image moderation failed: " + err.message });
+    }
+  }
+
   const recipe = await prisma.recipe.create({
     data: {
       title: recipeData.title,
