@@ -97,50 +97,6 @@ async function createRecipe(req, res) {
     }
   }
 
-  // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
-  if (recipeData.image) {
-    try {
-      const vision = require("@google-cloud/vision");
-      const client = new vision.ImageAnnotatorClient();
-      const [result] = await client.safeSearchDetection(recipeData.image);
-      const safe = result.safeSearchAnnotation;
-      if (safe) {
-        const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
-        if (
-          unsafeLikelihoods.includes(safe.adult) ||
-          unsafeLikelihoods.includes(safe.violence) ||
-          unsafeLikelihoods.includes(safe.racy) ||
-          unsafeLikelihoods.includes(safe.medical) ||
-          unsafeLikelihoods.includes(safe.spoof)
-        ) {
-          return res
-            .status(400)
-            .json({
-              error:
-                "The submitted URL contains an image that is harmful or explicit and cannot be fetched.",
-            });
-        }
-      }
-    } catch (err) {
-      return res
-        .status(500)
-        .json({ error: "Image moderation failed: " + err.message });
-    }
-  }
-
-  // Create recipe as before
-  const recipe = await prisma.recipe.create({
-    data: {
-      title: recipeData.title,
-      description: recipeData.description,
-      cuisine: recipeData.cuisine,
-      image: recipeData.image,
-      cookingTime: recipeData.cookingTime,
-      authorId: req.user.userId,
-      ingredients: { create: recipeData.ingredients },
-      instructions: { create: recipeData.instructions },
-    },
-  });
   res.json(recipe);
 }
 
