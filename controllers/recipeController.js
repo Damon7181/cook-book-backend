@@ -96,7 +96,18 @@ async function createRecipe(req, res) {
       return res.status(500).json({ error: err.message });
     }
   }
-
+  const recipe = await prisma.recipe.create({
+    data: {
+      title: recipeData.title,
+      description: recipeData.description,
+      cuisine: recipeData.cuisine,
+      image: recipeData.image,
+      cookingTime: recipeData.cookingTime,
+      authorId: req.user.userId,
+      ingredients: { create: recipeData.ingredients },
+      instructions: { create: recipeData.instructions },
+    },
+  });
   res.json(recipe);
 }
 
