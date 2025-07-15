@@ -15,36 +15,6 @@ async function getAllRecipes(req, res) {
 }
 
 async function createRecipe(req, res) {
-  // Validate required fields for both manual and Gemini input
-  const missingFields = [];
-  if (
-    !recipeData.title ||
-    typeof recipeData.title !== "string" ||
-    !recipeData.title.trim()
-  )
-    missingFields.push("title");
-  if (
-    !recipeData.image ||
-    typeof recipeData.image !== "string" ||
-    !recipeData.image.trim()
-  )
-    missingFields.push("image");
-  if (
-    !Array.isArray(recipeData.ingredients) ||
-    recipeData.ingredients.length === 0
-  )
-    missingFields.push("ingredients");
-  if (
-    !Array.isArray(recipeData.instructions) ||
-    recipeData.instructions.length === 0
-  )
-    missingFields.push("instructions");
-  if (missingFields.length > 0) {
-    return res.status(400).json({
-      error: `Missing or empty required fields: ${missingFields.join(", ")}`,
-    });
-  }
-  //
   const { videoUrl } = req.body;
   let recipeData = req.body;
   // console.log("Received videoUrl and data:", videoUrl, recipeData);
@@ -124,6 +94,35 @@ async function createRecipe(req, res) {
       };
     } catch (err) {
       return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
+  if (recipeData.image) {
+    try {
+      const vision = require("@google-cloud/vision");
+      const client = new vision.ImageAnnotatorClient();
+      const [result] = await client.safeSearchDetection(recipeData.image);
+      const safe = result.safeSearchAnnotation;
+      if (safe) {
+        const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
+        if (
+          unsafeLikelihoods.includes(safe.adult) ||
+          unsafeLikelihoods.includes(safe.violence) ||
+          unsafeLikelihoods.includes(safe.racy) ||
+          unsafeLikelihoods.includes(safe.medical) ||
+          unsafeLikelihoods.includes(safe.spoof)
+        ) {
+          return res.status(400).json({
+            error:
+              "The submitted URL contains an image that is harmful or explicit and cannot be fetched.",
+          });
+        }
+      }
+    } catch (err) {
+      return res
+        .status(500)
+        .json({ error: "Image moderation failed: " + err.message });
     }
   }
 
