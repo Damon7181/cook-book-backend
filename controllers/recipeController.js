@@ -64,9 +64,17 @@ async function createRecipe(req, res) {
         geminiJson = JSON.parse(response.text);
         console.log("Parsed Gemini JSON:", geminiJson);
       } catch {
-        return res.status(500).json({
-          error: "Failed to parse Gemini response",
+        return res.status(400).json({
+          error:
+            "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
           raw: response.text,
+        });
+      }
+      // If Gemini returns nothing or empty/unsafe fields, block
+      if (!geminiJson || !geminiJson.title || !geminiJson.image) {
+        return res.status(400).json({
+          error:
+            "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
         });
       }
       recipeData = {
@@ -86,6 +94,37 @@ async function createRecipe(req, res) {
       };
     } catch (err) {
       return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
+  if (recipeData.image) {
+    try {
+      const vision = require("@google-cloud/vision");
+      const client = new vision.ImageAnnotatorClient();
+      const [result] = await client.safeSearchDetection(recipeData.image);
+      const safe = result.safeSearchAnnotation;
+      if (safe) {
+        const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
+        if (
+          unsafeLikelihoods.includes(safe.adult) ||
+          unsafeLikelihoods.includes(safe.violence) ||
+          unsafeLikelihoods.includes(safe.racy) ||
+          unsafeLikelihoods.includes(safe.medical) ||
+          unsafeLikelihoods.includes(safe.spoof)
+        ) {
+          return res
+            .status(400)
+            .json({
+              error:
+                "The submitted URL contains an image that is harmful or explicit and cannot be fetched.",
+            });
+        }
+      }
+    } catch (err) {
+      return res
+        .status(500)
+        .json({ error: "Image moderation failed: " + err.message });
     }
   }
 
