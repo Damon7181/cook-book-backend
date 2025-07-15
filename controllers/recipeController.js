@@ -22,7 +22,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially from youtube link thumbnail), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
+      const prompt = `Extract structured recipe information ONLY if it is safe, family-friendly, and non-explicit. Do NOT extract or return any explicit, adult, violent, or unsafe content or images. Only use images that are safe for all ages. Extract fields: title, description, cuisine, image_URL (preferably from a YouTube thumbnail or the page, but only if safe), cookingTime, ingredients, instructions, servings, difficulty, tags from the following video or webpage URL: ${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
