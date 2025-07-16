@@ -22,7 +22,24 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `ONLY extract and return recipe data if the URL is 100% confirmed to be a real recipe or cooking page/video. If there is any doubt, or if the content is not a recipe, return nothing. Do NOT make up or guess any recipe data. If the page is not a recipe, return an empty object or null.`;
+      const prompt = `📌 You are a strict recipe extractor. Only extract structured recipe information **if and only if** the provided URL contains a **real, verifiable recipe or cooking tutorial**.
+
+❌ DO NOT return any recipe information if:
+  - The content is NOT explicitly a recipe or cooking tutorial (e.g., vlogs, lifestyle videos, food reviews, food challenges, travel content, interviews).
+  - The recipe is incomplete, vague, or missing key steps or ingredients.
+  - The **thumbnail or main image** contains **people**, **text overlays**, or is **not clearly of the food itself**.
+### 🛠️ Notes:
+- Can be adapted for **YouTube**, **food blogs**, **TikTok**, etc. — just let me know the platform and I’ll tailor it.
+- Ensures **AI safety**, **truthfulness**, and **visual filtering** (no people, no fake thumbnails).
+- Ideal for automation, scrapers, or content validation pipelines.
+
+Be truthful and extract ONLY if the content is strictly recipe-related. If it’s not a recipe or if visual verification fails, return:
+
+ json
+ { "error": "URL is not a valid recipe or food-related content." }
+
+ URL to process: ${videoUrl}
+`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
