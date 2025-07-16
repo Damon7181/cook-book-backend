@@ -24,7 +24,7 @@ async function createRecipe(req, res) {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
       const prompt = `ONLY extract and return recipe data if the URL is 100% confirmed to be a real recipe or cooking page/video. If there is any doubt, or if the content is not a recipe, return nothing. Do NOT make up or guess any recipe data. If the page is not a recipe, return an empty object or null.`;
       const response = await ai.models.generateContent({
-        model: "gemini-2.5-pro",
+        model: "gemini-2.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
