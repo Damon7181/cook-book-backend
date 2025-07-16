@@ -15,7 +15,8 @@ async function getAllRecipes(req, res) {
 }
 
 async function createRecipe(req, res) {
-  const { videoUrl } = req.body;
+  // const { videoUrl } = req.body;
+  const { videoUrl } = "Create a imaginary recipe";
   let recipeData = req.body;
   // console.log("Received videoUrl and data:", videoUrl, recipeData);
 
