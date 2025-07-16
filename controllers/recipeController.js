@@ -22,7 +22,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information ONLY if the provided URL is truly a recipe or cooking-related page or video. Carefully watch/read the content and extract the ACTUAL recipe, ingredients, and instructions as presented—do NOT invent or generalize. If the URL is not about a recipe, do NOT return any recipe data. For the image_URL, use the main food image or thumbnail ONLY if it clearly shows food. If no suitable food image is available, leave the image field empty. Return these fields: title, description, cuisine, image_URL (food only, no people), cookingTime, ingredients, instructions, servings, difficulty, tags. The URL to process is: ${videoUrl}`;
+      const prompt = `ONLY extract and return recipe data if the URL is 100% confirmed to be a real recipe or cooking page/video. If there is any doubt, or if the content is not a recipe, return nothing. Do NOT make up or guess any recipe data. If the page is not a recipe, return an empty object or null.`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-pro",
         contents: prompt,
