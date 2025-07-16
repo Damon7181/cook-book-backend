@@ -22,31 +22,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `
-📌 TASK:
-You are a strict recipe parser. Your only job is to extract **real cooking recipe** data from the given webpage or video URL.
-
-❌ STRICTLY AVOID EXTRACTION IF:
-- The URL points to a **movie**, **vlog**, **review**, **entertainment**, or **non-recipe** content
-- The page contains **explicit**, **adult**, **violent**, **racy**, or **unsafe** material
-- The thumbnail or page image contains **human faces**, **celebrities**, or **people**
-- The page contains **fictional**, **fake**, or **hallucinated** cooking content
-
-✅ ONLY PROCEED IF:
-- The content clearly includes a real recipe, like:
-  - Cooking blogs or food websites
-  - YouTube videos showing meal preparation
-  - Structured cooking instructions and ingredients
-
-📷 IMAGE REQUIREMENT:
-- Do **not** include any image that contains **people or faces**
-- Prefer images like dish thumbnails, food illustrations, or safe icons
-
-🛑 IF CONTENT IS INVALID:
-If the URL does not contain a valid recipe, respond with the following string:
-"NO_RECIPE_FOUND"
-🔗 URL to parse:
-${videoUrl}`;
+      const prompt = `Extract structured recipe information ONLY if the provided URL is truly a recipe or cooking-related page. If the URL is not about a recipe or cooking, do NOT generate or return any recipe data. Do NOT make up or hallucinate recipes for unrelated content. For the image_URL, only use a thumbnail or image if it is food-related and does NOT contain any person, face, or human body. If the thumbnail or image contains a person, face, or is not food, do NOT return any image. Only extract and return the following fields if the page is a real recipe: title, description, cuisine, image_URL (food only, no people), cookingTime, ingredients, instructions, servings, difficulty, tags. The URL to process is: ${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
