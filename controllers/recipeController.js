@@ -22,7 +22,31 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information ONLY if it is safe, family-friendly, and non-explicit. Do NOT extract or return any explicit, adult, violent, or unsafe content or images. Only use images that are safe for all ages. Extract fields: title, description, cuisine, image_URL (preferably from a YouTube thumbnail or the page, but only if safe), cookingTime, ingredients, instructions, servings, difficulty, tags from the following video or webpage URL: ${videoUrl}`;
+      const prompt = `
+📌 TASK:
+You are a strict recipe parser. Your only job is to extract **real cooking recipe** data from the given webpage or video URL.
+
+❌ STRICTLY AVOID EXTRACTION IF:
+- The URL points to a **movie**, **vlog**, **review**, **entertainment**, or **non-recipe** content
+- The page contains **explicit**, **adult**, **violent**, **racy**, or **unsafe** material
+- The thumbnail or page image contains **human faces**, **celebrities**, or **people**
+- The page contains **fictional**, **fake**, or **hallucinated** cooking content
+
+✅ ONLY PROCEED IF:
+- The content clearly includes a real recipe, like:
+  - Cooking blogs or food websites
+  - YouTube videos showing meal preparation
+  - Structured cooking instructions and ingredients
+
+📷 IMAGE REQUIREMENT:
+- Do **not** include any image that contains **people or faces**
+- Prefer images like dish thumbnails, food illustrations, or safe icons
+
+🛑 IF CONTENT IS INVALID:
+If the URL does not contain a valid recipe, respond with the following string:
+"NO_RECIPE_FOUND"
+🔗 URL to parse:
+${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
