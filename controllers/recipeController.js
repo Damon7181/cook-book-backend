@@ -17,7 +17,7 @@ async function getAllRecipes(req, res) {
 async function createRecipe(req, res) {
   const { videoUrl } = req.body;
   let recipeData = req.body;
-  // console.log("Received videoUrl and data:", videoUrl, recipeData);
+  console.log("Received videoUrl and data:", videoUrl, recipeData);
 
   if (videoUrl) {
     try {
@@ -138,7 +138,6 @@ async function createRecipe(req, res) {
       cuisine: recipeData.cuisine,
       image: recipeData.image,
       cookingTime: recipeData.cookingTime,
-      authorName: req.user.name,
       authorId: req.user.userId,
       ingredients: { create: recipeData.ingredients },
       instructions: { create: recipeData.instructions },
