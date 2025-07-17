@@ -61,7 +61,6 @@ model Recipe {
   createdAt   DateTime   @default(now())
   author      User?      @relation("UserRecipes", fields: [authorId], references: [id])
   authorId    String?
-  authorName  String?
   comments    Comment[]
   ratings     Rating[]
   savedBy     SavedRecipe[]

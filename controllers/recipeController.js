@@ -7,8 +7,8 @@ async function getAllRecipes(req, res) {
       author: true,
       comments: true,
       ratings: true,
-      ingredients: true,
-      instructions: true,
+      ingredients: false,
+      instructions: false,
     },
   });
   res.json(recipes);
