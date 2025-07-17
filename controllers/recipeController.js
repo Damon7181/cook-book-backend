@@ -21,10 +21,9 @@ async function createRecipe(req, res) {
 
   if (videoUrl) {
     try {
-      // Use documented Gemini 1.5 Pro API for YouTube video summarization
-      const { GoogleGenerativeAI } = require("@google/generative-ai");
-      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      //   const { GoogleGenerativeAI } = require("@google/generative-ai");
+      const genAI = new GoogleGenAI(process.env.GOOGLE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
       const result = await model.generateContent([
         "Extract structured recipe information (title, description, cuisine, image_URL, cookingTime, ingredients, instructions, servings, difficulty, tags) ONLY if the video is a real recipe or cooking video. Do NOT invent or generalize. Use the actual recipe and steps shown in the video. If the video is not a recipe, return nothing.",
         {
