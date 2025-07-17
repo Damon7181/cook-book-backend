@@ -1,5 +1,13 @@
 const prisma = require("../prisma/client");
-const { GoogleGenAI, Type } = require("@google/genai");
+// const { GoogleGenAI, Type } = require("@google/genai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { getTranscript } = require("youtube-transcript");
+
+// Function to create youtube tumbnail
+function getYouTubeThumbnail(url) {
+  const id = url.split("v=")[1]?.split("&")[0];
+  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+}
 
 async function getAllRecipes(req, res) {
   const recipes = await prisma.recipe.findMany({
@@ -14,6 +22,117 @@ async function getAllRecipes(req, res) {
   res.json(recipes);
 }
 
+// async function createRecipe(req, res) {
+//   const { videoUrl } = req.body;
+//   let recipeData = req.body;
+//   console.log("Received videoUrl and data:", videoUrl, recipeData);
+
+//   if (videoUrl) {
+//     try {
+//       const { GoogleGenerativeAI } = require("@google/generative-ai");
+//       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+//       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+//       const result = await model.generateContent([
+//         "Extract structured recipe information like title, description, cuisine, image_URL(Specially from youtube link thumbnail), cookingTime, ingredients, instructions",
+//         {
+//           fileData: {
+//             fileUri: videoUrl,
+
+//           },
+
+//         },
+
+//       ]);
+//       const text = result.response.text();
+//       let geminiJson;
+//       try {
+//         geminiJson = JSON.parse(text);
+//         console.log("Parsed Gemini JSON:", geminiJson);
+//       } catch {
+//         return res.status(400).json({
+//           error:
+//             "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
+//           raw: text,
+//         });
+//       }
+//       // If Gemini returns nothing or empty/unsafe fields, block
+//       if (!geminiJson || !geminiJson.title || !geminiJson.image) {
+//         return res.status(400).json({
+//           error:
+//             "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
+//           code: "HARMFUL_OR_EXPLICIT_URL",
+//           details: {
+//             url: videoUrl,
+//             reason: "Gemini did not return safe/valid data for this URL.",
+//           },
+//         });
+//       }
+//       recipeData = {
+//         title: geminiJson.title,
+//         description: geminiJson.description || "",
+//         cuisine: geminiJson.cuisine || "",
+//         image: geminiJson.image || "",
+//         cookingTime: geminiJson.total_time || geminiJson.cook_time || "",
+//         ingredients: (geminiJson.ingredients || []).map((i) => ({
+//           name: i,
+//           quantity: "",
+//         })),
+//         instructions: (geminiJson.steps || []).map((s, idx) => ({
+//           step: idx + 1,
+//           text: s,
+//         })),
+//       };
+//     } catch (err) {
+//       return res.status(500).json({ error: err.message });
+//     }
+//   }
+
+//   // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
+//   // if (recipeData.image) {
+//   //   try {
+//   //     const vision = require("@google-cloud/vision");
+//   //     const client = new vision.ImageAnnotatorClient();
+//   //     const [result] = await client.safeSearchDetection(recipeData.image);
+//   //     const safe = result.safeSearchAnnotation;
+//   //     if (safe) {
+//   //       const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
+//   //       if (
+//   //         unsafeLikelihoods.includes(safe.adult) ||
+//   //         unsafeLikelihoods.includes(safe.violence) ||
+//   //         unsafeLikelihoods.includes(safe.racy) ||
+//   //         unsafeLikelihoods.includes(safe.medical) ||
+//   //         unsafeLikelihoods.includes(safe.spoof)
+//   //       ) {
+//   //         return res.status(400).json({
+//   //           error:
+//   //             "The submitted URL contains an image that is harmful or explicit and cannot be fetched.",
+//   //         });
+//   //       }
+//   //     }
+//   //   } catch (err) {
+//   //     return res
+//   //       .status(500)
+//   //       .json({ error: "Image moderation failed: " + err.message });
+//   //   }
+//   // }
+
+//   const recipe = await prisma.recipe.create({
+//     data: {
+//       title: recipeData.title,
+//       description: recipeData.description,
+//       cuisine: recipeData.cuisine,
+//       image: recipeData.image,
+//       cookingTime: recipeData.cookingTime,
+//       authorId: req.user.userId,
+//       ingredients: { create: recipeData.ingredients },
+//       instructions: { create: recipeData.instructions },
+//     },
+//   });
+//   res.json(recipe);
+// }
+
+
+
 async function createRecipe(req, res) {
   const { videoUrl } = req.body;
   let recipeData = req.body;
@@ -21,46 +140,59 @@ async function createRecipe(req, res) {
 
   if (videoUrl) {
     try {
-      const { GoogleGenerativeAI } = require("@google/generative-ai");
+      // 1. Extract transcript from YouTube video
+      const transcriptArray = await getTranscript(videoUrl);
+      const transcriptText = transcriptArray.map((t) => t.text).join(" ");
+
+      // 2. Setup Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+
+      // 3. Generate structured recipe JSON
       const result = await model.generateContent([
-        "Extract structured recipe information (title, description, cuisine, image_URL, cookingTime, ingredients, instructions, servings, difficulty, tags) ONLY if the video is a real recipe or cooking video. Do NOT invent or generalize. Use the actual recipe and steps shown in the video. If the video is not a recipe, return nothing.",
+        `You are a recipe extractor. Return the following **strict JSON** based on the transcript:
         {
-          fileData: {
-            fileUri: videoUrl,
-          },
-        },
+          "title": "string",
+          "description": "string",
+          "cuisine": "string",
+          "image": "string (YouTube thumbnail URL if possible)",
+          "cook_time": "string",
+          "total_time": "string",
+          "ingredients": ["string"],
+          "steps": ["string"],
+          "servings": "string",
+          "difficulty": "string",
+          "tags": ["string"]
+        }
+
+        Only return valid JSON with double quotes and no extra comments or markdown.`,
+        transcriptText,
       ]);
+
       const text = result.response.text();
       let geminiJson;
+
       try {
         geminiJson = JSON.parse(text);
         console.log("Parsed Gemini JSON:", geminiJson);
       } catch {
         return res.status(400).json({
-          error:
-            "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
+          error: "Failed to parse structured data from the AI response.",
           raw: text,
         });
       }
-      // If Gemini returns nothing or empty/unsafe fields, block
-      if (!geminiJson || !geminiJson.title || !geminiJson.image) {
-        return res.status(400).json({
-          error:
-            "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
-          code: "HARMFUL_OR_EXPLICIT_URL",
-          details: {
-            url: videoUrl,
-            reason: "Gemini did not return safe/valid data for this URL.",
-          },
-        });
+
+      // 4. Fallback thumbnail if missing
+      if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
+        geminiJson.image = getYouTubeThumbnail(videoUrl);
       }
+
+      // 5. Build recipeData for DB
       recipeData = {
         title: geminiJson.title,
         description: geminiJson.description || "",
         cuisine: geminiJson.cuisine || "",
-        image: geminiJson.image || "",
+        image: geminiJson.image,
         cookingTime: geminiJson.total_time || geminiJson.cook_time || "",
         ingredients: (geminiJson.ingredients || []).map((i) => ({
           name: i,
@@ -76,48 +208,25 @@ async function createRecipe(req, res) {
     }
   }
 
-  // Image moderation (Google Vision SafeSearch) for both Gemini and manual input
-  // if (recipeData.image) {
-  //   try {
-  //     const vision = require("@google-cloud/vision");
-  //     const client = new vision.ImageAnnotatorClient();
-  //     const [result] = await client.safeSearchDetection(recipeData.image);
-  //     const safe = result.safeSearchAnnotation;
-  //     if (safe) {
-  //       const unsafeLikelihoods = ["LIKELY", "VERY_LIKELY"];
-  //       if (
-  //         unsafeLikelihoods.includes(safe.adult) ||
-  //         unsafeLikelihoods.includes(safe.violence) ||
-  //         unsafeLikelihoods.includes(safe.racy) ||
-  //         unsafeLikelihoods.includes(safe.medical) ||
-  //         unsafeLikelihoods.includes(safe.spoof)
-  //       ) {
-  //         return res.status(400).json({
-  //           error:
-  //             "The submitted URL contains an image that is harmful or explicit and cannot be fetched.",
-  //         });
-  //       }
-  //     }
-  //   } catch (err) {
-  //     return res
-  //       .status(500)
-  //       .json({ error: "Image moderation failed: " + err.message });
-  //   }
-  // }
+  // 6. Save to DB (using Prisma)
+  try {
+    const recipe = await prisma.recipe.create({
+      data: {
+        title: recipeData.title,
+        description: recipeData.description,
+        cuisine: recipeData.cuisine,
+        image: recipeData.image,
+        cookingTime: recipeData.cookingTime,
+        authorId: req.user.userId,
+        ingredients: { create: recipeData.ingredients },
+        instructions: { create: recipeData.instructions },
+      },
+    });
 
-  const recipe = await prisma.recipe.create({
-    data: {
-      title: recipeData.title,
-      description: recipeData.description,
-      cuisine: recipeData.cuisine,
-      image: recipeData.image,
-      cookingTime: recipeData.cookingTime,
-      authorId: req.user.userId,
-      ingredients: { create: recipeData.ingredients },
-      instructions: { create: recipeData.instructions },
-    },
-  });
-  res.json(recipe);
+    res.json(recipe);
+  } catch (err) {
+    res.status(500).json({ error: "Database error: " + err.message });
+  }
 }
 
 async function getRecipe(req, res) {
