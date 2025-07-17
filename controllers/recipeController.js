@@ -22,7 +22,7 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information ONLY if the provided URL is truly a recipe or cooking-related page or video. Carefully watch/read the content and extract the ACTUAL recipe, ingredients, and instructions as presented—do NOT invent or generalize. If the URL is not about a recipe, do NOT return any recipe data. For the image_URL, use the main food image or thumbnail ONLY if it clearly shows food and does NOT contain any person, face, or human body. If no suitable food image is available, leave the image field empty. Return these fields: title, description, cuisine, image_URL (food only, no people), cookingTime, ingredients, instructions, servings, difficulty, tags. The URL to process is: ${videoUrl}`;
+      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially from youtube link thumbnail), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash",
         contents: prompt,
@@ -138,6 +138,7 @@ async function createRecipe(req, res) {
       cuisine: recipeData.cuisine,
       image: recipeData.image,
       cookingTime: recipeData.cookingTime,
+      authorId: req.user,
       authorId: req.user.userId,
       ingredients: { create: recipeData.ingredients },
       instructions: { create: recipeData.instructions },
