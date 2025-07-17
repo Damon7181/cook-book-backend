@@ -21,53 +21,28 @@ async function createRecipe(req, res) {
 
   if (videoUrl) {
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-      const prompt = `Extract structured recipe information like title, description, cuisine, image_URL(Specially from youtube link thumbnail), cookingTime, ingredients, instructions from the following video or webpage URL: ${videoUrl}`;
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              description: { type: Type.STRING },
-              cuisine: { type: Type.STRING },
-              image: { type: Type.STRING },
-              cook_time: { type: Type.STRING },
-              total_time: { type: Type.STRING },
-              ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-              steps: { type: Type.ARRAY, items: { type: Type.STRING } },
-              servings: { type: Type.STRING },
-              difficulty: { type: Type.STRING },
-              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-            },
-            propertyOrdering: [
-              "title",
-              "description",
-              "cuisine",
-              "image",
-              "cook_time",
-              "total_time",
-              "ingredients",
-              "steps",
-              "servings",
-              "difficulty",
-              "tags",
-            ],
+      // Use documented Gemini 1.5 Pro API for YouTube video summarization
+      const { GoogleGenerativeAI } = require("@google/generative-ai");
+      const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+      const result = await model.generateContent([
+        "Extract structured recipe information (title, description, cuisine, image_URL, cookingTime, ingredients, instructions, servings, difficulty, tags) ONLY if the video is a real recipe or cooking video. Do NOT invent or generalize. Use the actual recipe and steps shown in the video. If the video is not a recipe, return nothing.",
+        {
+          fileData: {
+            fileUri: videoUrl,
           },
         },
-      });
+      ]);
+      const text = result.response.text();
       let geminiJson;
       try {
-        geminiJson = JSON.parse(response.text);
+        geminiJson = JSON.parse(text);
         console.log("Parsed Gemini JSON:", geminiJson);
       } catch {
         return res.status(400).json({
           error:
             "The submitted URL could not be processed. It may contain harmful or explicit material and cannot be fetched.",
-          raw: response.text,
+          raw: text,
         });
       }
       // If Gemini returns nothing or empty/unsafe fields, block
