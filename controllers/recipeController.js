@@ -1,7 +1,6 @@
 const prisma = require("../prisma/client");
 // const { GoogleGenAI, Type } = require("@google/genai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { getTranscript } = require("youtube-transcript");
 
 // Function to create youtube tumbnail
 function getYouTubeThumbnail(url) {
@@ -131,31 +130,29 @@ async function getAllRecipes(req, res) {
 //   res.json(recipe);
 // }
 
-
-
 async function createRecipe(req, res) {
   const { videoUrl } = req.body;
   let recipeData = req.body;
+
   console.log("Received videoUrl and data:", videoUrl, recipeData);
 
   if (videoUrl) {
     try {
-      // 1. Extract transcript from YouTube video
-      const transcriptArray = await getTranscript(videoUrl);
-      const transcriptText = transcriptArray.map((t) => t.text).join(" ");
-
-      // 2. Setup Gemini
+      // Init Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-      // 3. Generate structured recipe JSON
+      // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
-        `You are a recipe extractor. Return the following **strict JSON** based on the transcript:
+        `You are a professional cooking assistant. 
+        Analyze this YouTube video and infer recipe information.
+        Return only a **strict JSON** object in this format:
+
         {
           "title": "string",
           "description": "string",
           "cuisine": "string",
-          "image": "string (YouTube thumbnail URL if possible)",
+          "image": "string (YouTube thumbnail if not available)",
           "cook_time": "string",
           "total_time": "string",
           "ingredients": ["string"],
@@ -165,29 +162,36 @@ async function createRecipe(req, res) {
           "tags": ["string"]
         }
 
-        Only return valid JSON with double quotes and no extra comments or markdown.`,
-        transcriptText,
+        Only return valid JSON. No markdown, no explanations.
+        `,
+         {
+          fileData: {
+            fileUri: videoUrl,
+
+          },
+
+        },
       ]);
 
       const text = result.response.text();
-      let geminiJson;
 
+      let geminiJson;
       try {
         geminiJson = JSON.parse(text);
         console.log("Parsed Gemini JSON:", geminiJson);
       } catch {
         return res.status(400).json({
-          error: "Failed to parse structured data from the AI response.",
+          error: "Gemini returned invalid JSON.",
           raw: text,
         });
       }
 
-      // 4. Fallback thumbnail if missing
+      // Use thumbnail fallback if needed
       if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
         geminiJson.image = getYouTubeThumbnail(videoUrl);
       }
 
-      // 5. Build recipeData for DB
+      // Prepare recipe data
       recipeData = {
         title: geminiJson.title,
         description: geminiJson.description || "",
@@ -208,7 +212,7 @@ async function createRecipe(req, res) {
     }
   }
 
-  // 6. Save to DB (using Prisma)
+  // Save to DB
   try {
     const recipe = await prisma.recipe.create({
       data: {
@@ -228,7 +232,6 @@ async function createRecipe(req, res) {
     res.status(500).json({ error: "Database error: " + err.message });
   }
 }
-
 async function getRecipe(req, res) {
   const { id } = req.params;
   const recipe = await prisma.recipe.findUnique({
