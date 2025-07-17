@@ -138,7 +138,7 @@ async function createRecipe(req, res) {
       cuisine: recipeData.cuisine,
       image: recipeData.image,
       cookingTime: recipeData.cookingTime,
-      authorId: req.user,
+      author: req.user.userName,
       authorId: req.user.userId,
       ingredients: { create: recipeData.ingredients },
       instructions: { create: recipeData.instructions },
