@@ -3,20 +3,9 @@ const prisma = require("../prisma/client");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Function to create youtube tumbnail
-// function getYouTubeThumbnail(url) {
-//   const id = url.split("v=")[1]?.split("&")[0];
-//   return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
-// }
-function getYouTubeVideoId(url) {
-  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
-  return match ? match[1] : null;
-}
-
 function getYouTubeThumbnail(url) {
-  const videoId = getYouTubeVideoId(url);
-  return videoId
-    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
-    : "";
+  const id = url.split("v=")[1]?.split("&")[0];
+  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
 }
 
 async function getAllRecipes(req, res) {
@@ -155,17 +144,15 @@ async function createRecipe(req, res) {
 
       // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
-        `You are a professional cooking assistant.
-        Analyze this YouTube video and infer recipe information.For the image_URL,
-         use the main food image or thumbnail ONLY if it clearly shows food. If no suitable food image is available,
-          leave the image field empty.
+        `You are a professional cooking assistant. 
+        Analyze this YouTube video and infer recipe information.
         Return only a **strict JSON** object in this format:
 
         {
           "title": "string",
           "description": "string",
           "cuisine": "string",
-          "image": "string (YouTube url thumbnail )",
+          "image": "string (YouTube thumbnail if not available)",
           "cook_time": "string",
           "total_time": "string",
           "ingredients": ["string"],
@@ -177,10 +164,12 @@ async function createRecipe(req, res) {
 
         Only return valid JSON. No markdown, no explanations.
         `,
-        {
+         {
           fileData: {
             fileUri: videoUrl,
+
           },
+
         },
       ]);
 
@@ -190,6 +179,7 @@ async function createRecipe(req, res) {
       try {
         geminiJson = JSON.parse(text);
         console.log("Parsed Gemini JSON:", geminiJson);
+        
       } catch {
         return res.status(400).json({
           error: "Gemini returned invalid JSON.",
@@ -198,9 +188,9 @@ async function createRecipe(req, res) {
       }
 
       // Use thumbnail fallback if needed
-      // if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
-      //   geminiJson.image = getYouTubeThumbnail(videoUrl);
-      // }
+      if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
+        geminiJson.image = getYouTubeThumbnail(videoUrl);
+      }
 
       // Prepare recipe data
       recipeData = {
@@ -243,7 +233,6 @@ async function createRecipe(req, res) {
     res.status(500).json({ error: "Database error: " + err.message });
   }
 }
-
 async function getRecipe(req, res) {
   const { id } = req.params;
   const recipe = await prisma.recipe.findUnique({
