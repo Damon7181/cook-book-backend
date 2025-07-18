@@ -156,7 +156,9 @@ async function createRecipe(req, res) {
       // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
         `You are a professional cooking assistant.
-        Analyze this YouTube video and infer recipe information.
+        Analyze this YouTube video and infer recipe information.For the image_URL,
+         use the main food image or thumbnail ONLY if it clearly shows food. If no suitable food image is available,
+          leave the image field empty.
         Return only a **strict JSON** object in this format:
 
         {
