@@ -1,5 +1,5 @@
 const prisma = require("../prisma/client");
-const { GoogleGenAI, Type } = require("@google/genai");
+// const { GoogleGenAI, Type } = require("@google/genai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Function to create youtube tumbnail
@@ -139,106 +139,39 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       // Init Gemini
-      const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-2.5-flash",
-        config: {
-          temperature: 0.4,
-          topP: 0.8,
-          topK: 40,
-          maxOutputTokens: 2048,
-        },
-      });
-
-      // Configure structured data format
-      const structuredConfig = {
-        title: { type: "string", description: "Recipe title" },
-        description: {
-          type: "string",
-          description: "Brief recipe description",
-        },
-        cuisine: {
-          type: "string",
-          description: "Cuisine type (e.g., Italian, Mexican)",
-        },
-        image: { type: "string", description: "YouTube video thumbnail URL" },
-        cook_time: { type: "string", description: "Cooking time duration" },
-        total_time: {
-          type: "string",
-          description: "Total preparation and cooking time",
-        },
-        ingredients: {
-          type: "array",
-          items: { type: "string" },
-          description: "List of ingredients",
-        },
-        steps: {
-          type: "array",
-          items: { type: "string" },
-          description: "Step by step instructions",
-        },
-        servings: { type: "string", description: "Number of servings" },
-        difficulty: { type: "string", description: "Recipe difficulty level" },
-        tags: {
-          type: "array",
-          items: { type: "string" },
-          description: "Recipe tags/categories",
-        },
-      };
+      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
+        `You are a professional cooking assistant. 
+        Analyze this YouTube video and infer recipe information.
+        Return only a **strict JSON** object in this format:
+
         {
-          role: "user",
-          parts: [
-            {
-              text: `You are a professional cooking assistant. Analyze this YouTube video and extract recipe information according to the structured format. Return only valid JSON without any markdown or explanations.`,
-            },
-            {
-              inlineData: {
-                mimeType: "application/json",
-                data: JSON.stringify(structuredConfig),
-              },
-            },
-            {
-              fileData: {
-                fileUri: videoUrl,
-                mimeType: "video/*",
-              },
-            },
-          ],
+          "title": "string",
+          "description": "string",
+          "cuisine": "string",
+          "image": "string (YouTube thumbnail if not available)",
+          "cook_time": "string",
+          "total_time": "string",
+          "ingredients": ["string"],
+          "steps": ["string"],
+          "servings": "string",
+          "difficulty": "string",
+          "tags": ["string"]
+        }
+
+        Only return valid JSON. No markdown, no explanations.
+        `,
+         {
+          fileData: {
+            fileUri: videoUrl,
+
+          },
+
         },
       ]);
-      //       const result = await model.generateContent([
-      //         `You are a professional cooking assistant.
-      // Analyze this YouTube video and extract detailed recipe information. Return only a **strict JSON** object in the following format and rules:
-
-      // {
-      //   "title": "string",
-      //   "description": "string",
-      //   "cuisine": "string",
-      //   "image": "string (this must be the YouTube thumbnail URL, in the format: https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)",
-      //   "cook_time": "string",
-      //   "total_time": "string",
-      //   "ingredients": ["string"],
-      //   "steps": ["string"],
-      //   "servings": "string",
-      //   "difficulty": "string",
-      //   "tags": ["string"]
-      // }
-
-      //  For the "image" field:
-      // - Extract the VIDEO_ID from the YouTube URL.
-      // - Return the thumbnail in the format: https://i.ytimg.com/vi/OAZpSsu03VA/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGH8gTygcMA8=&rs=AOn4CLCBltB6e7Krfb9j7D10T9QndA1i_w
-      // - Do NOT use any other image source or broken URL format.
-
-      // Only return valid JSON. Do not include markdown, explanations, or extra text.`,
-      //         {
-      //           fileData: {
-      //             fileUri: videoUrl,
-      //           },
-      //         },
-      //       ]);
 
       const text = result.response.text();
 
