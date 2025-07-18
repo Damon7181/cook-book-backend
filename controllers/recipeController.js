@@ -163,7 +163,7 @@ async function createRecipe(req, res) {
           "title": "string",
           "description": "string",
           "cuisine": "string",
-          "image": "string (YouTube url thumbnail )",
+          "image": "string (Exact YouTube thumbnail image URL )",
           "cook_time": "string",
           "total_time": "string",
           "ingredients": ["string"],
@@ -200,13 +200,13 @@ async function createRecipe(req, res) {
       //   geminiJson.image = getYouTubeThumbnail(videoUrl);
       // }
       // Fallback thumbnail if image is missing or invalid
-      const imageFromGemini = geminiJson.image || "";
-      const isValidImage =
-        imageFromGemini.startsWith("http") &&
-        imageFromGemini.includes("ytimg.com");
-      if (!isValidImage) {
-        geminiJson.image = getYouTubeThumbnail(videoUrl);
-      }
+      // const imageFromGemini = geminiJson.image || "";
+      // const isValidImage =
+      //   imageFromGemini.startsWith("http") &&
+      //   imageFromGemini.includes("ytimg.com");
+      // if (!isValidImage) {
+      //   geminiJson.image = getYouTubeThumbnail(videoUrl);
+      // }
       // Prepare recipe data
       recipeData = {
         title: geminiJson.title,
