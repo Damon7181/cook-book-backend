@@ -152,7 +152,7 @@ async function createRecipe(req, res) {
           "title": "string",
           "description": "string",
           "cuisine": "string",
-          "image": "string (YouTube thumbnail if not available)",
+          "image": "string (image_URL(Specially from youtube link thumbnail))",
           "cook_time": "string",
           "total_time": "string",
           "ingredients": ["string"],
@@ -164,12 +164,10 @@ async function createRecipe(req, res) {
 
         Only return valid JSON. No markdown, no explanations.
         `,
-         {
+        {
           fileData: {
             fileUri: videoUrl,
-
           },
-
         },
       ]);
 
@@ -179,7 +177,6 @@ async function createRecipe(req, res) {
       try {
         geminiJson = JSON.parse(text);
         console.log("Parsed Gemini JSON:", geminiJson);
-        
       } catch {
         return res.status(400).json({
           error: "Gemini returned invalid JSON.",
