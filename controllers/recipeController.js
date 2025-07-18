@@ -143,27 +143,57 @@ async function createRecipe(req, res) {
       const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
       // Prompt Gemini with URL and request structured data
+      // const result = await model.generateContent([
+      //   `You are a professional cooking assistant.
+      //   Analyze this YouTube video and infer recipe information.
+      //   Return only a **strict JSON** object in this format:
+
+      //   {
+      //     "title": "string",
+      //     "description": "string",
+      //     "cuisine": "string",
+      //     "image": "string (image_URL(Specially from youtube link thumbnail))",
+      //     "cook_time": "string",
+      //     "total_time": "string",
+      //     "ingredients": ["string"],
+      //     "steps": ["string"],
+      //     "servings": "string",
+      //     "difficulty": "string",
+      //     "tags": ["string"]
+      //   }
+
+      //   Only return valid JSON. No markdown, no explanations.
+      //   `,
+      //   {
+      //     fileData: {
+      //       fileUri: videoUrl,
+      //     },
+      //   },
+      // ]);
       const result = await model.generateContent([
         `You are a professional cooking assistant. 
-        Analyze this YouTube video and infer recipe information.
-        Return only a **strict JSON** object in this format:
+Analyze this YouTube video and extract detailed recipe information. Return only a **strict JSON** object in the following format and rules:
 
-        {
-          "title": "string",
-          "description": "string",
-          "cuisine": "string",
-          "image": "string (image_URL(Specially from youtube link thumbnail))",
-          "cook_time": "string",
-          "total_time": "string",
-          "ingredients": ["string"],
-          "steps": ["string"],
-          "servings": "string",
-          "difficulty": "string",
-          "tags": ["string"]
-        }
+{
+  "title": "string",
+  "description": "string",
+  "cuisine": "string",
+  "image": "string (this must be the YouTube thumbnail URL, in the format: https://i.ytimg.com/vi/VIDEO_ID/maxresdefault.jpg)",
+  "cook_time": "string",
+  "total_time": "string",
+  "ingredients": ["string"],
+  "steps": ["string"],
+  "servings": "string",
+  "difficulty": "string",
+  "tags": ["string"]
+}
 
-        Only return valid JSON. No markdown, no explanations.
-        `,
+ For the "image" field:
+- Extract the VIDEO_ID from the YouTube URL.
+- Return the thumbnail in the format: https://i.ytimg.com/vi/OAZpSsu03VA/hq720.jpg?sqp=-oaymwFBCNAFEJQDSFryq4qpAzMIARUAAIhCGADYAQHiAQoIGBACGAY4AUAB8AEB-AG2CIACgA-KAgwIABABGH8gTygcMA8=&rs=AOn4CLCBltB6e7Krfb9j7D10T9QndA1i_w
+- Do NOT use any other image source or broken URL format.
+
+Only return valid JSON. Do not include markdown, explanations, or extra text.`,
         {
           fileData: {
             fileUri: videoUrl,
