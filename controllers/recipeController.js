@@ -3,9 +3,20 @@ const prisma = require("../prisma/client");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Function to create youtube tumbnail
+// function getYouTubeThumbnail(url) {
+//   const id = url.split("v=")[1]?.split("&")[0];
+//   return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+// }
+function getYouTubeVideoId(url) {
+  const match = url.match(/(?:v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
+  return match ? match[1] : null;
+}
+
 function getYouTubeThumbnail(url) {
-  const id = url.split("v=")[1]?.split("&")[0];
-  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+  const videoId = getYouTubeVideoId(url);
+  return videoId
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : "";
 }
 
 async function getAllRecipes(req, res) {
@@ -144,7 +155,7 @@ async function createRecipe(req, res) {
 
       // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
-        `You are a professional cooking assistant. 
+        `You are a professional cooking assistant.
         Analyze this YouTube video and infer recipe information.
         Return only a **strict JSON** object in this format:
 
@@ -188,7 +199,14 @@ async function createRecipe(req, res) {
       // if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
       //   geminiJson.image = getYouTubeThumbnail(videoUrl);
       // }
-
+      // Fallback thumbnail if image is missing or invalid
+      const imageFromGemini = geminiJson.image || "";
+      const isValidImage =
+        imageFromGemini.startsWith("http") &&
+        imageFromGemini.includes("ytimg.com");
+      if (!isValidImage) {
+        geminiJson.image = getYouTubeThumbnail(videoUrl);
+      }
       // Prepare recipe data
       recipeData = {
         title: geminiJson.title,
@@ -230,6 +248,7 @@ async function createRecipe(req, res) {
     res.status(500).json({ error: "Database error: " + err.message });
   }
 }
+
 async function getRecipe(req, res) {
   const { id } = req.params;
   const recipe = await prisma.recipe.findUnique({
