@@ -4,8 +4,10 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Function to create youtube tumbnail
 function getYouTubeThumbnail(url) {
-  const id = url.split("v=")[1]?.split("&")[0];
-  return `https://img.youtube.com/vi/${id}/maxresdefault.jpg`;
+  const id = url.split("/")[4] ?? url.split("/")[3];
+  const finalId = id.split("?")[0] ?? id;
+  console.log("Extracted YouTube url and ID:", url, finalId);
+  return `https://img.youtube.com/vi/${finalId}/maxresdefault.jpg`;
 }
 
 async function getAllRecipes(req, res) {
@@ -135,8 +137,10 @@ async function createRecipe(req, res) {
   let recipeData = req.body;
 
   console.log("Received videoUrl and data:", videoUrl, recipeData);
+  const img = getYouTubeThumbnail(videoUrl);
+  console.log("Using thumbnail:", img);
 
-  if (videoUrl) {
+  if (!videoUrl) {
     try {
       // Init Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
@@ -185,9 +189,10 @@ async function createRecipe(req, res) {
       }
 
       // Use thumbnail fallback if needed
-      if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
-        geminiJson.image = getYouTubeThumbnail(videoUrl);
-      }
+      // if (!geminiJson.image || !geminiJson.image.startsWith("http")) {
+      geminiJson.image = getYouTubeThumbnail(videoUrl);
+      console.log("Using thumbnail:", geminiJson.image);
+      // }
 
       // Prepare recipe data
       recipeData = {
