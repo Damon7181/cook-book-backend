@@ -1,5 +1,5 @@
 const prisma = require("../prisma/client");
-// const { GoogleGenAI, Type } = require("@google/genai");
+const { GoogleGenAI, Type } = require("@google/genai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 // Function to create youtube tumbnail
@@ -139,35 +139,74 @@ async function createRecipe(req, res) {
   if (videoUrl) {
     try {
       // Init Gemini
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+      const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-2.5-flash",
+        config: {
+          temperature: 0.4,
+          topP: 0.8,
+          topK: 40,
+          maxOutputTokens: 2048,
+        },
+      });
+
+      // Configure structured data format
+      const structuredConfig = {
+        title: { type: "string", description: "Recipe title" },
+        description: {
+          type: "string",
+          description: "Brief recipe description",
+        },
+        cuisine: {
+          type: "string",
+          description: "Cuisine type (e.g., Italian, Mexican)",
+        },
+        image: { type: "string", description: "YouTube video thumbnail URL" },
+        cook_time: { type: "string", description: "Cooking time duration" },
+        total_time: {
+          type: "string",
+          description: "Total preparation and cooking time",
+        },
+        ingredients: {
+          type: "array",
+          items: { type: "string" },
+          description: "List of ingredients",
+        },
+        steps: {
+          type: "array",
+          items: { type: "string" },
+          description: "Step by step instructions",
+        },
+        servings: { type: "string", description: "Number of servings" },
+        difficulty: { type: "string", description: "Recipe difficulty level" },
+        tags: {
+          type: "array",
+          items: { type: "string" },
+          description: "Recipe tags/categories",
+        },
+      };
 
       // Prompt Gemini with URL and request structured data
       const result = await model.generateContent([
-        `You are a professional cooking assistant.
-        Analyze this YouTube video and infer recipe information.
-        Return only a **strict JSON** object in this format:
-
         {
-          "title": "string",
-          "description": "string",
-          "cuisine": "string",
-          "image": "string (image_URL(Specially from youtube link thumbnail))",
-          "cook_time": "string",
-          "total_time": "string",
-          "ingredients": ["string"],
-          "steps": ["string"],
-          "servings": "string",
-          "difficulty": "string",
-          "tags": ["string"]
-        }
-
-        Only return valid JSON. No markdown, no explanations.
-        `,
-        {
-          fileData: {
-            fileUri: videoUrl,
-          },
+          role: "user",
+          parts: [
+            {
+              text: `You are a professional cooking assistant. Analyze this YouTube video and extract recipe information according to the structured format. Return only valid JSON without any markdown or explanations.`,
+            },
+            {
+              inlineData: {
+                mimeType: "application/json",
+                data: JSON.stringify(structuredConfig),
+              },
+            },
+            {
+              fileData: {
+                fileUri: videoUrl,
+                mimeType: "video/*",
+              },
+            },
+          ],
         },
       ]);
       //       const result = await model.generateContent([
