@@ -1,3 +1,11 @@
+// Function to create youtube tumbnail
+function getYouTubeThumbnail(url) {
+  const id = url.split("/")[4] ?? url.split("/")[3];
+  const finalId = id.split("?")[0] ?? id;
+  console.log("Extracted YouTube url and ID:", url, finalId);
+  return `https://img.youtube.com/vi/${finalId}/maxresdefault.jpg`;
+}
+
 const prisma = require("../prisma/client");
 // const { GoogleGenAI, Type } = require("@google/genai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
@@ -140,7 +148,7 @@ async function createRecipe(req, res) {
   const img = getYouTubeThumbnail(videoUrl);
   console.log("Using thumbnail:", img);
 
-  if (videoUrl) {
+  if (!videoUrl) {
     try {
       // Init Gemini
       const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
