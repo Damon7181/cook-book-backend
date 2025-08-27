@@ -2,7 +2,7 @@ const prisma = require("../prisma/client");
 // const { GoogleGenAI, Type } = require("@google/genai");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-// Function to create youtube tumbnail
+//Function to create youtube tumbnail
 function getYouTubeThumbnail(url) {
   const id = url.split("/")[4] ?? url.split("/")[3];
   const finalId = id.split("?")[0] ?? id;
